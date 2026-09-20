@@ -1,0 +1,9 @@
+## Interface: 11200
+## Title: TrinketMenu
+## Author: Gello
+## Notes: AddOn to manage trinkets
+## Title-zhCN:TrinketMenu 饰品管理器
+## Notes-zhCN:显示你装备了的饰品，右键图标设置。
+TrinketMenu.lua
+TrinketMenu.xml
+localization.lua
