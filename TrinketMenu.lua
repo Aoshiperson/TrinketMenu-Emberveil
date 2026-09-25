@@ -266,6 +266,10 @@ function TrinketMenu.Initialize()
 	TrinketMenu.OrientWindows()
 	TrinketMenu.StartTimer("CooldownUpdate")
 
+
+	TrinketMenu.DockWindows()
+	TrinketMenu.ReflectLock()
+
 	TrinketMenu_MainFrame:Show()
 end
 
@@ -383,45 +387,15 @@ function TrinketMenu.UpdateWornTrinkets()
 end
 
 function TrinketMenu.SlashHandler(msg)
+end
 
-	msg = string.lower(msg)
-
-	if not msg or msg=="" then
-		TrinketMenu.ToggleFrame(TrinketMenu_MainFrame)
-	elseif msg=="lock" then
-		TrinketMenuOptions.Locked="ON"
-		TrinketMenu.DockWindows()
-		TrinketMenu.ReflectLock()
-	elseif msg=="unlock" then
-		TrinketMenuOptions.Locked="OFF"
-		TrinketMenu.DockWindows()
-		TrinketMenu.ReflectLock()
-	elseif string.find(msg,"scale") then
-		local _,_,menuscale = string.find(msg,"scale menu (.+)")
-		if tonumber(menuscale) then
-			TrinketMenu.FrameToScale = TrinketMenu_MenuFrame
-			TrinketMenu.ScaleFrame(menuscale)
-		end
-		local _,_,mainscale = string.find(msg,"scale main (.+)")
-		if tonumber(mainscale) then
-			TrinketMenu.FrameToScale = TrinketMenu_MainFrame
-			TrinketMenu.ScaleFrame(mainscale)
-		end
-		if not tonumber(menuscale) and not tonumber(mainscale) then
-			DEFAULT_CHAT_FRAME:AddMessage(TrinketMenu.Message1)
-			DEFAULT_CHAT_FRAME:AddMessage(TrinketMenu.Message2)
-			DEFAULT_CHAT_FRAME:AddMessage(TrinketMenu.Message3)
-			DEFAULT_CHAT_FRAME:AddMessage(TrinketMenu.Message4)
-			DEFAULT_CHAT_FRAME:AddMessage(TrinketMenu.Message5)
-		end
-		TrinketMenu.FrameToScale = nil
-		TrinketMenuPerOptions.MainScale = TrinketMenu_MainFrame:GetScale()
-		TrinketMenuPerOptions.MenuScale = TrinketMenu_MenuFrame:GetScale()
+function TrinketMenu.ToggleFrame(frame)
+	if frame:IsVisible() then
+		frame:Hide()
 	else
-		DEFAULT_CHAT_FRAME:AddMessage(TrinketMenu.Message6)
-		DEFAULT_CHAT_FRAME:AddMessage(TrinketMenu.Message7)
-		DEFAULT_CHAT_FRAME:AddMessage(TrinketMenu.Message10)
-		DEFAULT_CHAT_FRAME:AddMessage(TrinketMenu.Message11)
+		frame:Show()
+		TrinketMenu.DockWindows()
+		TrinketMenu.ReflectLock()
 	end
 end
 
@@ -434,7 +408,7 @@ function TrinketMenu.ToggleFrame(frame)
 end
 
 function TrinketMenu.ReflectLock()
-	local c = TrinketMenuOptions.Locked=="ON" and 0 or .5
+	local c = 0
 	TrinketMenu_MainFrame:SetBackdropColor(c,c,c,c)
 	TrinketMenu_MainFrame:SetBackdropBorderColor(c,c,c,c*2)
 	TrinketMenu_MenuFrame:SetBackdropColor(c,c,c,c)
@@ -447,8 +421,6 @@ end
 function TrinketMenu.MainFrame_OnMouseUp()
 	if arg1=="LeftButton" then
 		this:StopMovingOrSizing()
-		TrinketMenuPerOptions.XPos = TrinketMenu_MainFrame:GetLeft()
-		TrinketMenuPerOptions.YPos = TrinketMenu_MainFrame:GetTop()
 	elseif TrinketMenuOptions.Locked=="OFF" then
 		if TrinketMenuPerOptions.MainOrient=="VERTICAL" then
 			TrinketMenuPerOptions.MainOrient = "HORIZONTAL"
@@ -461,9 +433,6 @@ function TrinketMenu.MainFrame_OnMouseUp()
 end
 
 function TrinketMenu.MainFrame_OnMouseDown(arg1)
-	if arg1=="LeftButton" and TrinketMenuOptions.Locked=="OFF" then
-		this:StartMoving()
-	end
 end
 
 --[[ Timers ]]
@@ -549,18 +518,6 @@ function TrinketMenu.MenuTrinket_OnClick()
 		TrinketMenu.EquipTrinketByName(TrinketMenu.BaggedTrinkets[this:GetID()].name,slot)
 		if not IsShiftKeyDown() and TrinketMenuOptions.KeepOpen=="OFF" then
 			TrinketMenu_MenuFrame:Hide()
-		end
-	end
-end
-
---[[ Docking ]]
-
-function TrinketMenu.MenuFrame_OnMouseDown()
-	if arg1=="LeftButton" and TrinketMenuOptions.Locked=="OFF" then
-		TrinketMenu_MenuFrame:StartMoving()
-
-		if TrinketMenuOptions.KeepDocked=="ON" then
-			TrinketMenu.StartTimer("DockingMenu")
 		end
 	end
 end
@@ -964,6 +921,18 @@ function TrinketMenu.CooldownUpdate()
 					TrinketMenu.Notify(i.." ready soon!")
 				end
 				TrinketMenuPerOptions.ItemsUsed[i]=5 -- tag for just 0 notify now
+			elseif TrinketMenuPerOptions.ItemsUsed[i]==5 and start==0 then
+				if TrinketMenuOptions.Notify=="ON" then
+					TrinketMenu.Notify(i.." ready!")
+				end
+			end
+			if start==0 then
+				TrinketMenuPerOptions.ItemsUsed[i] = nil
+			end
+		end
+	end
+
+	-- update cooldown numbers
 			elseif TrinketMenuPerOptions.ItemsUsed[i]==5 and start==0 then
 				if TrinketMenuOptions.Notify=="ON" then
 					TrinketMenu.Notify(i.." ready!")
