@@ -1,4 +1,6 @@
-﻿TrinketMenu.Message1 = "|cFFFFFF00TrinketMenu scale:";
+﻿if (GetLocale() == "enUS") then
+
+TrinketMenu.Message1 = "|cFFFFFF00TrinketMenu scale:";
 TrinketMenu.Message2 = "/trinket scale main (number) : set exact main scale";
 TrinketMenu.Message3 = "/trinket scale menu (number) : set exact menu scale";
 TrinketMenu.Message4 = "ie, /trinket scale menu 0.85";

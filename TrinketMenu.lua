@@ -312,22 +312,6 @@ function TrinketMenu.FindItem(name,includeInventory)
 	end
 end
 
---[[ Frame Scripts ]]--
-
-function TrinketMenu.OnLoad()
-
-	SlashCmdList["TrinketMenuCOMMAND"] = TrinketMenu.SlashHandler
-	SLASH_TrinketMenuCOMMAND1 = "/trinketmenu";
-	SLASH_TrinketMenuCOMMAND2 = "/trinket";
-	
-	this:RegisterEvent("PLAYER_LOGIN")
-	this:RegisterEvent("PLAYER_REGEN_ENABLED")
-	this:RegisterEvent("PLAYER_UNGHOST")
-	this:RegisterEvent("PLAYER_ALIVE")
-	this:RegisterEvent("UNIT_INVENTORY_CHANGED")
-	this:RegisterEvent("UPDATE_BINDINGS")
-	this:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
-end
 
 function TrinketMenu.OnEvent()
 
@@ -386,18 +370,6 @@ function TrinketMenu.UpdateWornTrinkets()
 	end
 end
 
-function TrinketMenu.SlashHandler(msg)
-end
-
-function TrinketMenu.ToggleFrame(frame)
-	if frame:IsVisible() then
-		frame:Hide()
-	else
-		frame:Show()
-		TrinketMenu.DockWindows()
-		TrinketMenu.ReflectLock()
-	end
-end
 
 function TrinketMenu.ToggleFrame(frame)
 	if frame:IsVisible() then
@@ -433,6 +405,9 @@ function TrinketMenu.MainFrame_OnMouseUp()
 end
 
 function TrinketMenu.MainFrame_OnMouseDown(arg1)
+	if arg1=="LeftButton" and TrinketMenuOptions.Locked=="OFF" then
+		this:StartMoving()
+	end
 end
 
 --[[ Timers ]]
@@ -519,6 +494,13 @@ function TrinketMenu.MenuTrinket_OnClick()
 		if not IsShiftKeyDown() and TrinketMenuOptions.KeepOpen=="OFF" then
 			TrinketMenu_MenuFrame:Hide()
 		end
+	end
+end
+
+function TrinketMenu.MenuFrame_OnMouseDown(arg1)
+	if arg1=="LeftButton" and TrinketMenuOptions.Locked=="OFF" then
+		TrinketMenu_MenuFrame:StartMoving()
+		TrinketMenu.StartTimer("DockingMenu")
 	end
 end
 
@@ -933,18 +915,6 @@ function TrinketMenu.CooldownUpdate()
 	end
 
 	-- update cooldown numbers
-			elseif TrinketMenuPerOptions.ItemsUsed[i]==5 and start==0 then
-				if TrinketMenuOptions.Notify=="ON" then
-					TrinketMenu.Notify(i.." ready!")
-				end
-			end
-			if start==0 then
-				TrinketMenuPerOptions.ItemsUsed[i] = nil
-			end
-		end
-	end
-
-	-- update cooldown numbers
 	if TrinketMenuOptions.CooldownCount=="ON" then
 		if TrinketMenu_MainFrame:IsVisible() then
 			TrinketMenu.WriteWornCooldowns()
@@ -1005,3 +975,185 @@ function TrinketMenu.ReflectKeyBindings()
 		TrinketMenu_Trinket1HotKey:SetText("")
 	end
 end
+
+--============================================================
+-- 由 TrinketMenu.xml 合并而来（原插件的 Frame/模板定义）
+--============================================================
+
+-- 公共 Backdrop
+local TrinketMenu_Backdrop = {
+	bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 4, right = 4, top = 4, bottom = 4 },
+}
+
+-- 缩放按钮（原 TrinketMenuResizeTemplate）
+local function TrinketMenu_CreateResizeButton(name, parent)
+	local btn = CreateFrame("Button", name, parent)
+	btn:SetWidth(16); btn:SetHeight(16)
+	btn:SetNormalTexture("Interface\\AddOns\\TrinketMenu\\Buttons")
+	btn:GetNormalTexture():SetTexCoord(.75, .875, 0, .125)
+	btn:SetHighlightTexture("Interface\\AddOns\\TrinketMenu\\Buttons")
+	local hl = btn:GetHighlightTexture()
+	hl:SetBlendMode("ADD")
+	hl:SetTexCoord(.75, .875, 0, .125)
+	btn:SetFrameLevel(btn:GetFrameLevel()+2)
+	btn:SetScript("OnMouseDown", TrinketMenu.StartScaling)
+	btn:SetScript("OnMouseUp", TrinketMenu.StopScaling)
+	return btn
+end
+
+-- 身上饰品按钮（原 TrinketMenuMainTrinketTemplate）
+local function TrinketMenu_CreateMainTrinketButton(name, parent, id)
+	local btn = CreateFrame("CheckButton", name, parent, "ActionButtonTemplate")
+	btn:SetID(id)
+	btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	btn:SetScript("OnClick", TrinketMenu.MainTrinket_OnClick)
+	btn:SetScript("OnEnter", function()
+		TrinketMenu.BuildMenu()
+		TrinketMenu.WornTrinketTooltip()
+	end)
+	btn:SetScript("OnLeave", TrinketMenu.ClearTooltip)
+	return btn
+end
+
+-- 背包饰品按钮（原 TrinketMenuMenuTrinketTemplate）
+local function TrinketMenu_CreateMenuTrinketButton(name, parent, id)
+	local btn = CreateFrame("CheckButton", name, parent, "ActionButtonTemplate")
+	btn:SetID(id)
+	btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	btn:SetScript("OnClick", TrinketMenu.MenuTrinket_OnClick)
+	btn:SetScript("OnEnter", TrinketMenu.MenuTrinketTooltip)
+	btn:SetScript("OnLeave", TrinketMenu.ClearTooltip)
+	return btn
+end
+
+-- 冷却时间文字（原 TrinketMenuTimeTemplate）
+local function TrinketMenu_CreateTimeFrame(baseName, parent)
+	local f = CreateFrame("Frame", nil, parent)
+	f:SetWidth(36); f:SetHeight(12)
+	f:SetPoint("BOTTOMRIGHT")
+	local fs = f:CreateFontString(baseName.."Time", "OVERLAY", "NumberFontNormal")
+	fs:SetJustifyH("CENTER")
+	fs:SetAllPoints(f)
+	return f
+end
+
+-- 排队图标（原 TrinketMenuQueueTemplate），只用于两个身上饰品按钮
+local function TrinketMenu_CreateQueueFrame(baseName, parent)
+	local f = CreateFrame("Frame", nil, parent)
+	f:SetWidth(18); f:SetHeight(18)
+	f:SetPoint("TOPLEFT", -2, 2)
+	local tex = f:CreateTexture(baseName.."Queue", "OVERLAY")
+	tex:SetAllPoints(f)
+	return f
+end
+
+-- 四角对接标记贴图
+local function TrinketMenu_CreateDockTexture(name, parent, point, left, right)
+	local tex = parent:CreateTexture(name, "OVERLAY")
+	tex:SetWidth(16); tex:SetHeight(16)
+	tex:SetPoint(point)
+	tex:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border")
+	tex:SetBlendMode("ADD")
+	tex:SetTexCoord(left, right, 0, 1)
+	tex:Hide()
+	return tex
+end
+
+--============================================================
+-- TrinketMenu_MainFrame
+--============================================================
+TrinketMenu_MainFrame = CreateFrame("Frame", "TrinketMenu_MainFrame", UIParent)
+local main = TrinketMenu_MainFrame
+main:SetToplevel(true)
+main:SetFrameStrata("LOW")
+main:EnableMouse(true)
+main:SetMovable(true)
+main:Hide()
+main:SetWidth(91); main:SetHeight(52)
+main:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", 400, 400)
+main:SetBackdrop(TrinketMenu_Backdrop)
+
+TrinketMenu_CreateDockTexture("TrinketMenu_MainDock_TOPRIGHT",   main, "TOPRIGHT",    0.625, 0.75)
+TrinketMenu_CreateDockTexture("TrinketMenu_MainDock_TOPLEFT",    main, "TOPLEFT",    0.5,   0.625)
+TrinketMenu_CreateDockTexture("TrinketMenu_MainDock_BOTTOMLEFT", main, "BOTTOMLEFT", 0.75,  0.875)
+TrinketMenu_CreateDockTexture("TrinketMenu_MainDock_BOTTOMRIGHT",main, "BOTTOMRIGHT",0.875, 1)
+
+TrinketMenu_Trinket0 = TrinketMenu_CreateMainTrinketButton("TrinketMenu_Trinket0", main, 13)
+TrinketMenu_Trinket0:SetPoint("TOPLEFT", 8, -8)
+TrinketMenu_CreateTimeFrame("TrinketMenu_Trinket0", TrinketMenu_Trinket0)
+TrinketMenu_CreateQueueFrame("TrinketMenu_Trinket0", TrinketMenu_Trinket0)
+
+TrinketMenu_Trinket1 = TrinketMenu_CreateMainTrinketButton("TrinketMenu_Trinket1", main, 14)
+TrinketMenu_Trinket1:SetPoint("BOTTOMRIGHT", -8, 8)
+TrinketMenu_CreateTimeFrame("TrinketMenu_Trinket1", TrinketMenu_Trinket1)
+TrinketMenu_CreateQueueFrame("TrinketMenu_Trinket1", TrinketMenu_Trinket1)
+
+TrinketMenu_MainResizeButton = TrinketMenu_CreateResizeButton("TrinketMenu_MainResizeButton", main)
+TrinketMenu_MainResizeButton:SetPoint("BOTTOMRIGHT", 1, -1)
+
+main:SetScript("OnEvent", TrinketMenu.OnEvent)
+main:SetScript("OnMouseDown", TrinketMenu.MainFrame_OnMouseDown)
+main:SetScript("OnMouseUp", TrinketMenu.MainFrame_OnMouseUp)
+main:SetScript("OnShow", TrinketMenu.OnShow)
+-- 原 XML 里有两个 <OnHide>，后一个覆盖前一个，实际只有 TrinketMenu.OnHide()
+-- 生效；它内部本来就会顺带 Hide 掉 MenuFrame，行为和原来完全一致
+main:SetScript("OnHide", TrinketMenu.OnHide)
+
+-- 原来靠 XML <OnLoad> 调用 TrinketMenu.OnLoad()（该函数在 lua 里其实
+-- 从未定义过）来注册事件。这里直接注册 OnEvent 用到的所有事件：
+main:RegisterEvent("PLAYER_LOGIN")
+main:RegisterEvent("UNIT_INVENTORY_CHANGED")
+main:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+main:RegisterEvent("PLAYER_REGEN_ENABLED")
+main:RegisterEvent("PLAYER_UNGHOST")
+main:RegisterEvent("PLAYER_ALIVE")
+main:RegisterEvent("UPDATE_BINDINGS")
+
+--============================================================
+-- TrinketMenu_MenuFrame
+--============================================================
+TrinketMenu_MenuFrame = CreateFrame("Frame", "TrinketMenu_MenuFrame", UIParent)
+local menu = TrinketMenu_MenuFrame
+menu:SetToplevel(true)
+menu:SetFrameStrata("MEDIUM")
+menu:EnableMouse(true)
+menu:SetMovable(true)
+menu:SetClampedToScreen(true)
+menu:Hide()
+menu:SetWidth(52); menu:SetHeight(91)
+menu:SetPoint("BOTTOMLEFT", main, "BOTTOMRIGHT")
+menu:SetBackdrop(TrinketMenu_Backdrop)
+
+TrinketMenu_CreateDockTexture("TrinketMenu_MenuDock_TOPRIGHT",   menu, "TOPRIGHT",    0.625, 0.75)
+TrinketMenu_CreateDockTexture("TrinketMenu_MenuDock_TOPLEFT",    menu, "TOPLEFT",    0.5,   0.625)
+TrinketMenu_CreateDockTexture("TrinketMenu_MenuDock_BOTTOMLEFT", menu, "BOTTOMLEFT", 0.75,  0.875)
+TrinketMenu_CreateDockTexture("TrinketMenu_MenuDock_BOTTOMRIGHT",menu, "BOTTOMRIGHT",0.875, 1)
+
+TrinketMenu_MenuResizeButton = TrinketMenu_CreateResizeButton("TrinketMenu_MenuResizeButton", menu)
+TrinketMenu_MenuResizeButton:SetPoint("BOTTOMRIGHT", 1, -1)
+
+for i = 1, 30 do
+	local name = "TrinketMenu_Menu"..i
+	local btn = TrinketMenu_CreateMenuTrinketButton(name, menu, i)
+	TrinketMenu_CreateTimeFrame(name, btn)
+end
+
+menu:SetScript("OnMouseDown", TrinketMenu.MenuFrame_OnMouseDown)
+menu:SetScript("OnMouseUp", TrinketMenu.MenuFrame_OnMouseUp)
+
+--============================================================
+-- TrinketMenu_TimersFrame
+--============================================================
+TrinketMenu_TimersFrame = CreateFrame("Frame", "TrinketMenu_TimersFrame", UIParent)
+TrinketMenu_TimersFrame:Hide()
+TrinketMenu_TimersFrame:SetScript("OnUpdate", TrinketMenu.TimersFrame_OnUpdate)
+
+--============================================================
+-- TrinketMenu_TooltipScan
+--============================================================
+TrinketMenu_TooltipScan = CreateFrame("GameTooltip", "TrinketMenu_TooltipScan", UIParent, "GameTooltipTemplate")
+TrinketMenu_TooltipScan:Hide()
+TrinketMenu_TooltipScan:SetOwner(WorldFrame, "ANCHOR_NONE")
