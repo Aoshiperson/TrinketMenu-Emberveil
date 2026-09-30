@@ -113,13 +113,8 @@ end
 
 -- displays windows vertically or horizontally
 function TrinketMenu.OrientWindows()
-	if TrinketMenuPerOptions.MainOrient=="HORIZONTAL" then
-		TrinketMenu_MainFrame:SetWidth(92)
-		TrinketMenu_MainFrame:SetHeight(52)
-	else
-		TrinketMenu_MainFrame:SetWidth(52)
-		TrinketMenu_MainFrame:SetHeight(92)
-	end
+		TrinketMenu_MainFrame:SetWidth(36)
+		TrinketMenu_MainFrame:SetHeight(62)
 end
 
 -- scan inventory and build MenuFrame
@@ -136,7 +131,7 @@ function TrinketMenu.BuildMenu()
 	for i=0,4 do
 		for j=1,GetContainerNumSlots(i) do
 			itemLink = GetContainerItemLink(i,j)
-			
+
 			if itemLink then
 				_,_,itemID,itemName = string.find(GetContainerItemLink(i,j) or "","item:(%d+).+%[(.+)%]")
 				_,_,_,_,_,_,_,equipSlot,itemTexture = GetItemInfo(itemID or "")
@@ -244,7 +239,7 @@ function TrinketMenu.Initialize()
 	TrinketMenuPerOptions.ItemsUsed = TrinketMenuPerOptions.ItemsUsed or {} -- 3.0
 	options.StopOnSwap = options.StopOnSwap or "OFF" -- 3.2
 
-		TrinketMenu_MainFrame:SetPoint("TOPLEFT","UIParent","BOTTOMLEFT",370,150)
+		TrinketMenu_MainFrame:SetPoint("TOPLEFT","UIParent","BOTTOMLEFT",570,150)
 		TrinketMenu_MainFrame:SetScale(0.7)
 		TrinketMenu_MenuFrame:SetScale(0.7)
 
@@ -809,7 +804,7 @@ function TrinketMenu.EquipTrinketByName(name,slot)
 		end
 	end
 	TrinketMenu.UpdateCombatQueue()
-end	
+end
 
 function TrinketMenu.UpdateCombatQueue()
 	local bag,slot
@@ -1072,7 +1067,7 @@ main:SetFrameStrata("LOW")
 main:EnableMouse(true)
 main:SetMovable(true)
 main:Hide()
-main:SetWidth(91); main:SetHeight(52)
+main:SetWidth(31); main:SetHeight(32)
 main:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", 400, 400)
 main:SetBackdrop(TrinketMenu_Backdrop)
 
@@ -1123,7 +1118,7 @@ menu:EnableMouse(true)
 menu:SetMovable(true)
 menu:SetClampedToScreen(true)
 menu:Hide()
-menu:SetWidth(52); menu:SetHeight(91)
+menu:SetWidth(32); menu:SetHeight(51)
 menu:SetPoint("BOTTOMLEFT", main, "BOTTOMRIGHT")
 menu:SetBackdrop(TrinketMenu_Backdrop)
 
