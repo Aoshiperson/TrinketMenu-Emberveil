@@ -1,8 +1,8 @@
 --[[ TrinketMenu (Emberveil 精简版) —— 配置全在 CFG，直接改 ]]--
 
 local CFG = {
-	X = 570, Y = 150,           -- 主窗口左上角位置（相对屏幕左下角，已含缩放前的单位）
-	SCALE = 0.7,
+	X = 370, Y = 150,           -- 主窗口左上角位置（相对屏幕左下角，已含缩放前的单位）
+	SCALE = 1,
 	MAIN_ORIENT = "VERTICAL",   -- 已装备的两个饰品："VERTICAL" 或 "HORIZONTAL"
 	MENU_SIDE = "RIGHT",        -- 背包饰品菜单在主窗口哪一侧："RIGHT" "LEFT" "TOP" "BOTTOM"
 	COLUMNS = false,            -- 填数字固定列数；false 则按饰品数量自动
@@ -486,6 +486,25 @@ main:RegisterEvent("PLAYER_ALIVE")
 
 local driver = CreateFrame("Frame", nil, UIParent)
 local over_acc, tick_acc = 0, 0
+
+-- 辅助函数：精准检测鼠标是否在某个 Frame 的矩形区域内（兼容 SCALE 缩放）
+local function IsCursorOverFrame(f)
+	if not f or not f:IsVisible() then return false end
+	local scale = f:GetEffectiveScale() or 1
+	local x, y = GetCursorPosition()
+	x = x / scale
+	y = y / scale
+
+	local left = f:GetLeft()
+	local bottom = f:GetBottom()
+	local width = f:GetWidth()
+	local height = f:GetHeight()
+
+	if not left or not bottom or not width or not height then return false end
+
+	return (x >= left and x <= (left + width) and y >= bottom and y <= (bottom + height))
+end
+
 driver:SetScript("OnUpdate", function(self, elapsed)
 	elapsed = elapsed or arg1
 	if not elapsed then return end
@@ -501,9 +520,15 @@ driver:SetScript("OnUpdate", function(self, elapsed)
 	over_acc = over_acc + elapsed
 	if over_acc >= .25 then
 		over_acc = 0
-		if menu:IsVisible() and not CFG.KEEP_OPEN and not IsShiftKeyDown()
-			and not MouseIsOver(main) and not MouseIsOver(menu) then
-			menu:Hide()
+		if menu:IsVisible() and not CFG.KEEP_OPEN and not IsShiftKeyDown() then
+			-- 使用基于实际屏幕坐标和缩放的精准碰撞检测
+			local over = IsCursorOverFrame(main) or IsCursorOverFrame(menu)
+			for i = 0, 1 do if IsCursorOverFrame(worn[i]) then over = true end end
+			for i = 1, nbagged do if IsCursorOverFrame(mbtn[i]) then over = true end end
+
+			if not over then
+				menu:Hide()
+			end
 		end
 	end
 
@@ -513,7 +538,3 @@ driver:SetScript("OnUpdate", function(self, elapsed)
 		Tick()
 	end
 end)
-
--- 给按键绑定用
-function TrinketMenu.UseTop() UseInventoryItem(13) end
-function TrinketMenu.UseBottom() UseInventoryItem(14) end
